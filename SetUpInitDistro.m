@@ -49,9 +49,5 @@ XV(3,:) = -XV(6,:).*XV(7,:);%zinit = -vzint*texit i.e. that at the cell exit tim
 XV(2,:) = -XV(5,:).*XV(7,:) + ApertureSize*cos(theta).*sqrt(radius);
 XV(1,:) = -XV(4,:).*XV(7,:)+ ApertureSize*sin(theta).*sqrt(radius);
 
-% XV = XV(:,abs(XV(4,:)./XV(6,:))<=0.1&abs(XV(5,:)./XV(6,:))<=0.1);%throw
-% out ones that are fast in x or y compared to z
-
-
-save('XVOrigTemp','XV')
+% save('XVOrigTemp','XV')
 end

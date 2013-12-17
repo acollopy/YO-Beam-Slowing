@@ -1,29 +1,15 @@
 clear
-%load('Sept25noacc.mat')
-% load('simnoacc.mat'); %taken with 1.4*10^6 initial molecules
-load('Aug_28_191329.mat'); %unslowed beam in mot region
-motmcs = mcs;
-motscope = scope;
 
-load ('Nov_05_150456.mat');
-cubemcs = mcs;
-cubescope = scope;
-cubeyag = .0012;
-% FluorvTimeNoAcc = FluorvTime;
-
-% angle = [0 -.02 -.04 -.06 -.08 -.1];
-
-
-%  motDetuning = 1.6*detectVels*10^6; %Hz, compared to absolute frequency
-
+%setup constants
 gammaV0 = 2*pi*5*10^6;
 kB = 1.38e-23;
 mass = 105*1.6605e-27;
 T = 3.2;
-CellToMotDist = 0.40;
-CellToCubeDist = .20;
+CellToMotDist = 0.44;
+CellToCubeDist = .22;
 CubeBeamSize = .002;
 MOTsize = .010;
+longBeamSize = .01;
 TrappingV = 10;
 c = 3e8;
 lambda1 = 648e-9;
@@ -32,24 +18,20 @@ f0 = c/lambda0;
 detectionPower = .005*10^-3; %for 1 cm beam
 satIntensity0 = 2.3*10^-3; %per cm^2
 s0 = detectionPower/satIntensity0;
-
-
 v2angle = .01; %in rads, angle between v=1, 2 in slowing beam;
 detectionAngle = .525; %in rads, angle from normal to beam;
 % detectionAngle = 0;
-% detectionAngle = 0; %in rads, angle from normal to beam;
+returnSweepLength = .001; %ramp back to first frequency in 1 ms
+
 
 % motDetuning = 0*10^6; %Hz, compared to absolute frequency
 % detectVels = [50 60 70 80 90 100 110 120 130];
 detectVels = [40 60];
 %motDetuning = -1.6*detectVels*10^6;
-%motDetuning = -1.6*detectVels*10^6*sin(detectionAngle); %Hz, compared to absolute frequency
-%motDetuning = -f0*detectVels*sin(detectionAngle)/c./(1.+detectVels*sin(detectionAngle)/c);
+
 motDetuning = -f0*detectVels*sin(detectionAngle)/c;
-averagenum = [1 20];
-% SweepTimeEnd = [8 9 10 11 12 13]*10^-3;
-% vFast = [105 90 75 60 45];
-% deltaV = [20 40 60];
+averagenum = [1 10];
+
 vF = [80];
 vSpread = [16];
 
@@ -69,6 +51,17 @@ for l = 1:size(detectVels,2) %go through velocity detunings
                 XV = SetUpInitDistro(vF(i),vSpread(j));
                 NumberOfMolecules = size(XV,2);
 
+                %Frequency Sweep Parameters.
+                
+                vFast = 60;
+                vSlow = 40;
+                SweepTimeStart =5e-3;
+                SweepTimeEnd = 9e-3;
+                %             vSlow = vFast(j) - deltaV(k);
+                
+                SweepFrequencyStart = -vFast*1.60e6;%in Hz
+                SweepFrequencyEnd = -vSlow*1.6e6;
+                
                 time = 0;
                 vint = zeros(3,NumberOfMolecules);
                 acc = zeros(3,NumberOfMolecules);
@@ -82,20 +75,7 @@ for l = 1:size(detectVels,2) %go through velocity detunings
                 NumberOfTrappable = 0;
                 LostToDelta = 0;
                 
-                %Frequency Sweep Parameters.
-                
-                vFast = 60;
-                vSlow = 40;
-                SweepTimeStart =5e-3;
-                SweepTimeEnd = 9e-3;
-                %             vSlow = vFast(j) - deltaV(k);
-                
-                SweepFrequencyStart = -vFast*1.60e6;%in Hz
-                SweepFrequencyEnd = -vSlow*1.6e6;
-                
-                SweepReturnTime= SweepTimeEnd +1e-3;%return the frequency to the starting point.
-                SweepRate = (SweepFrequencyEnd-SweepFrequencyStart)/(SweepTimeEnd - SweepTimeStart);
-                ReturnSweepRate = (SweepFrequencyStart-SweepFrequencyEnd)/(SweepReturnTime - SweepTimeEnd);
+
                 
                 while time <= SimTime
                     vStart = XV(6,:);
@@ -104,12 +84,12 @@ for l = 1:size(detectVels,2) %go through velocity detunings
                         %We are slowing.
                         h = hFine;
                         %Symplectic Integrator
-                        acc = LongBeamSlowingAcc(XV,time,SweepTimeStart,SweepRate,...
-                            SweepFrequencyEnd,lambda0,lambda1,SweepTimeEnd,SweepFrequencyStart,ReturnSweepRate,SweepReturnTime);
+                        acc = LongBeamSlowingAcc(XV,time,SweepTimeStart,...
+                            SweepFrequencyEnd,lambda0,lambda1,SweepTimeEnd,SweepFrequencyStart,returnSweepLength,longBeamSize);
                         XV(6,:) = XV(6,:) + acc.*h/2;
                         XV(1:3,:) = XV(1:3,:) + XV(4:6,:) *h;
-                        acc = LongBeamSlowingAcc(XV,time+h/2,SweepTimeStart,SweepRate,...
-                            SweepFrequencyEnd,lambda0,lambda1,SweepTimeEnd,SweepFrequencyStart,ReturnSweepRate,SweepReturnTime);
+                        acc = LongBeamSlowingAcc(XV,time+h/2,SweepTimeStart,...
+                            SweepFrequencyEnd,lambda0,lambda1,SweepTimeEnd,SweepFrequencyStart,returnSweepLength,longBeamSize);
                         XV(6,:) = XV(6,:) + acc.*h/2;
                         
                     else
