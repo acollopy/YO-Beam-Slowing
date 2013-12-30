@@ -35,10 +35,10 @@ XV(5,:) = normrnd(0,sqrt(kB*T/mass),1,NumberOfMolecules);
 XV = XV(:,XV(6,:)>0); %only allow the ones that are going forward
 NumberOfMolecules = size(XV,2);
 XV(7,:) = -CellEmptyingTime*log(1-rand(1,NumberOfMolecules)) + YAGFire; %Cell Exit time.
-% XV(7,:) = XV(7,:) + .01255 +.0075;
+XV(7,:) = XV(7,:) + .02;
 % XV(7,:) = XV(7,:) -.00006582.*XV(6,:);
-% XV(7,:) = XV(7,:) -.00012.*XV(6,:);
-% XV(7,:) = XV(7,:)- CellToMotDist./(XV(6,:)); %Cell Exit time.
+XV(7,:) = XV(7,:) -.00012.*XV(6,:);
+XV(7,:) = XV(7,:)- CellToMotDist./(XV(6,:)); %Cell Exit time.
 
 XV = XV(:,XV(7,:)>0); %only allow positive exit times
 NumberOfMolecules = size(XV,2);

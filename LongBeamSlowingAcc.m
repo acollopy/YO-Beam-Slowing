@@ -16,7 +16,7 @@ DeltaDoppler0 = 2*pi.*XV(6,:).*(1/lambda0)+2*pi*DeltaLaser0;
 AccFullPower = -1.09e14.*(2.206e15+DeltaDoppler0.^2+4.84*DeltaDoppler1.^2).^(-1)*194604;
 if (time-SweepTimeStart >0 && SweepTimeEnd>time)
     NumberOfMolecules = size(XV,2);
-    InSlowingBeam = zeros(1,NumberOfMolecules)+(XV(3,:)>0 & XV(1,:).^2+XV(2,:).^2 <= longBeamSize^2);
+    InSlowingBeam = zeros(1,NumberOfMolecules)+(XV(3,:)>0 & XV(1,:).^2+XV(2,:).^2 <= longBeamSize^2 & XV(9,:) == 1); %in beam and in state 1
     acc = AccFullPower.*XV(9,:).*InSlowingBeam;
     %         acc = AccFullPower.*XV(9,:).*hvs(XV(3,:)).*hvs(BeamSize-sqrt(XV(1,:).^2+XV(2,:).^2));
 else

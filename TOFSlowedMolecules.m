@@ -30,17 +30,28 @@ detectVels = [40 60];
 %motDetuning = -1.6*detectVels*10^6;
 
 motDetuning = -f0*detectVels*sin(detectionAngle)/c;
-averagenum = [1 10];
+averagenum = [1 1];
 
 vF = [80];
 vSpread = [16];
+% vSpread = sqrt(kB*T/mass);
 
 v2BeamSize = .005; %radius
 
 hFine = 1e-6; %simulation time step
 hCoarse = 1e-4;
-SimTime = 100e-3;
+simTime = 40e-3;
 
+                vFast = 150;
+                vSlow = 150;
+                sweepTimeStart =25e-3;
+                sweepTimeEnd = 25.01e-3;
+                %             vSlow = vFast(j) - deltaV(k);
+                
+                SweepFrequencyStart = -vFast*1.60e6;%in Hz
+                SweepFrequencyEnd = -vSlow*1.6e6;
+
+detuningTime = GenerateFrequencySweep(vFast,vSlow,sweepTimeStart,sweepTimeEnd,hFine,hCoarse,simTime); %first row is time, second is detuning from resonance for v=1,2 (Hz)
 
 for l = 1:size(detectVels,2) %go through velocity detunings
     for k = averagenum(1):averagenum(2) % go through process multiple times for averaging purposes
@@ -53,20 +64,12 @@ for l = 1:size(detectVels,2) %go through velocity detunings
 
                 %Frequency Sweep Parameters.
                 
-                vFast = 60;
-                vSlow = 40;
-                SweepTimeStart =5e-3;
-                SweepTimeEnd = 9e-3;
-                %             vSlow = vFast(j) - deltaV(k);
-                
-                SweepFrequencyStart = -vFast*1.60e6;%in Hz
-                SweepFrequencyEnd = -vSlow*1.6e6;
-                
-                time = 0;
+
+
                 vint = zeros(3,NumberOfMolecules);
                 acc = zeros(3,NumberOfMolecules);
                 SimIndex = 1;
-                FluorvTime = zeros(4,round((SweepTimeEnd-SweepTimeStart/hFine))+round((SimTime-SweepTimeEnd-SweepTimeStart)/hCoarse));
+                FluorvTime = zeros(4,round((sweepTimeEnd-SweepTimeStart/hFine))+round((simTime-sweepTimeEnd-SweepTimeStart)/hCoarse));
 %                 CubeFluorvTime = zeros(2,round((SweepTimeEnd-SweepTimeStart/hFine))+round((SimTime-SweepTimeEnd-SweepTimeStart)/hCoarse));
                
 
@@ -77,19 +80,19 @@ for l = 1:size(detectVels,2) %go through velocity detunings
                 
 
                 
-                while time <= SimTime
+                for t = 1:size(detuningTime)
                     vStart = XV(6,:);
                     
-                    if (time-(SweepTimeStart-hCoarse)>=0 && (SweepTimeEnd+hCoarse-time)>0)
+                    if (time-(SweepTimeStart-hCoarse)>=0 && (sweepTimeEnd+hCoarse-time)>0)
                         %We are slowing.
                         h = hFine;
                         %Symplectic Integrator
                         acc = LongBeamSlowingAcc(XV,time,SweepTimeStart,...
-                            SweepFrequencyEnd,lambda0,lambda1,SweepTimeEnd,SweepFrequencyStart,returnSweepLength,longBeamSize);
+                            SweepFrequencyEnd,lambda0,lambda1,sweepTimeEnd,SweepFrequencyStart,returnSweepLength,longBeamSize);
                         XV(6,:) = XV(6,:) + acc.*h/2;
                         XV(1:3,:) = XV(1:3,:) + XV(4:6,:) *h;
                         acc = LongBeamSlowingAcc(XV,time+h/2,SweepTimeStart,...
-                            SweepFrequencyEnd,lambda0,lambda1,SweepTimeEnd,SweepFrequencyStart,returnSweepLength,longBeamSize);
+                            SweepFrequencyEnd,lambda0,lambda1,sweepTimeEnd,SweepFrequencyStart,returnSweepLength,longBeamSize);
                         XV(6,:) = XV(6,:) + acc.*h/2;
                         
                     else
@@ -105,10 +108,9 @@ for l = 1:size(detectVels,2) %go through velocity detunings
                             (XV(2,:).^2+(XV(3,:)-0.4).^2<0.005^2)&XV(4,:)<=10&XV(5,:)<=10&XV(6,:)<=10);  %Have an index which increases for each molecule that is trappable.0 Not trapped.  1 trapped 2 was trapped (don't double count.
                         NumberOfTrappable =NumberOfTrappable+sum( XV(10,:)==1) ;
                     end
+                   
                     
-                    StateStart = XV(9,:);
-                    
-                    [XV, LostToDelta] = LossIntoDeltaAndv2(XV,vStart,StateStart,v2angle,v2BeamSize,LostToDelta);
+                    [XV, LostToDelta] = LossIntoDeltaAndv2(XV,vStart,v2angle,v2BeamSize,LostToDelta);
                     
                     SimIndex = SimIndex + 1;
                     time = time+h;
@@ -142,6 +144,7 @@ for l = 1:size(detectVels,2) %go through velocity detunings
                     
                     FluorvTime(3,SimIndex) = NumberOfTrappable;
                     v2 = find(XV(:,XV(9,:)==0));
+                    
                     FluorvTime(4,SimIndex) = sum(v2);
                     
                     
@@ -150,15 +153,15 @@ for l = 1:size(detectVels,2) %go through velocity detunings
                 NumberOfTrappable
                 Trapped(i) =NumberOfTrappable;
                 
-                %             figure()
+                            figure()
                 
-                %             plot(FluorvTime(1,:),FluorvTime(2,:))
-                %
-                %             xlabel('time [s]')
-                %             xlim([0 .025]);
-                %             ylabel('Fluorescence [a.u.]')
+                            plot(FluorvTime(1,:),FluorvTime(2,:))
+                
+                            xlabel('time [s]')
+                            xlim([0 .025]);
+                            ylabel('Fluorescence [a.u.]')
 
-                %             title([num2str(vF(i)) ' m/s with spread of ' num2str(vSpread(j)) ', detection angle at ' num2str(detectionAngle) ', laser detuning ' num2str(motDetuning(l)/10^6) ' MHz (detect ' num2str(detectVels(l)) 'm/s'])
+                            title([num2str(vF(i)) ' m/s with spread of ' num2str(vSpread(j)) ', detection angle at ' num2str(detectionAngle) ', laser detuning ' num2str(motDetuning(l)/10^6) ' MHz (detect ' num2str(detectVels(l)) 'm/s'])
                save([num2str(k) '_vF' num2str(vF(i)) '_' num2str(vSpread(j)*10) '_' num2str(detectVels(l))], 'FluorvTime');
                 %
             end
